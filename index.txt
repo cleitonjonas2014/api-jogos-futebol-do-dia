@@ -1,0 +1,71 @@
+// Importa as ferramentas que vamos usar
+import * as cheerio from 'cheerio';
+import axios from 'axios';
+
+const urlDoSite = 'https://www.futebolnatv.com.br/';
+
+async function buscarJogos() {
+  console.log('Iniciando busca de jogos com os seletores corretos...');
+
+  try {
+    // 1. Acessa o site e pega o HTML
+    const { data: html } = await axios.get(urlDoSite, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    // 2. Carrega o HTML no Cheerio
+    const $ = cheerio.load(html);
+    const jogosEncontrados = [];
+
+    // 3. A GRANDE MUDANÇA: Iteramos sobre cada 'div' com a classe 'gamecard'
+    $('div.gamecard').each((index, element) => {
+      const card = $(element);
+
+      // --- Daqui para baixo, são nossas "suposições inteligentes" ---
+      // Precisamos encontrar as classes certas para cada informação DENTRO do card.
+
+      // Para o CAMPEONATO: Ele geralmente fica *antes* do card do jogo.
+      // Este seletor inteligente (.prevAll) procura o "título da liga" mais próximo que veio antes do jogo.
+      const campeonato = card.prevAll('div.all-scores-widget-competition-header-container').first().text().trim();
+      
+      // Para o HORÁRIO
+      const horario = card.find('div.hour').text().trim();
+
+      // Para os TIMES
+      const timeCasa = card.find('div.home-team > div.team-name').text().trim();
+      const timeFora = card.find('div.away-team > div.team-name').text().trim();
+
+      // Para os CANAIS
+      const canais = [];
+      card.find('div.channels-container a').each((i, linkElement) => {
+        const link = $(linkElement);
+        canais.push({
+          canal: link.text().trim(),
+          url: link.attr('href')
+        });
+      });
+      
+      // Montamos o nosso objeto de jogo
+      if (timeCasa && timeFora) { // Adiciona apenas se encontrou os times
+        jogosEncontrados.push({
+          campeonato: campeonato.replace(/(\r\n|\n|\r)/gm," ").split('Rodada')[0].trim(), // Limpa o texto do campeonato
+          horario,
+          timeCasa,
+          timeFora,
+          canais
+        });
+      }
+    });
+
+    console.log('Extração concluída!');
+    console.log(JSON.stringify(jogosEncontrados, null, 2)); // Formata a saída para ficar mais legível
+
+  } catch (error) {
+    console.error('Ocorreu um erro:', error.message);
+  }
+}
+
+// Executa a função
+buscarJogos();
