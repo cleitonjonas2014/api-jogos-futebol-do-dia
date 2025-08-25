@@ -2,10 +2,10 @@
   "name": "projetojogos",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js", // Mude para server.js
-  "type": "module",     // Adicione esta linha
+  "main": "server.js",
+  "type": "module",
   "scripts": {
-    "start": "node server.js" // Adicione esta linha
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
