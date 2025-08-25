@@ -22,4 +22,3 @@ app.get('/jogos', async (req, res) => {
 // Inicia o servidor e o faz "escutar" por requisições
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando! Acesse os jogos em http://localhost:${PORT}/jogos`);
-});
