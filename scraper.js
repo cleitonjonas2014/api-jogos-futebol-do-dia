@@ -22,29 +22,28 @@ export async function buscarJogos(dia = 'hoje') {
     const page = await browser.newPage();
     console.log(`Navegando para ${urlDoSite}...`);
 
-    // ✅ TEMPO DE ESPERA AUMENTADO PARA 2 MINUTOS
     await page.goto(urlDoSite, { waitUntil: 'networkidle2', timeout: 120000 });
 
-    // ✅ LÓGICA DE ROLAGEM DA PÁGINA (JÁ INCLUÍDA)
-    console.log('Simulando rolagem para carregar todas as imagens...');
+    console.log('Simulando rolagem LENTA para carregar todas as imagens...');
     await page.evaluate(async () => {
         await new Promise((resolve) => {
             let totalHeight = 0;
             const distance = 100;
             const timer = setInterval(() => {
-                const scrollHeight = document.body.scrollHeight;
+                const scrollHeight = document.body.scrollHeight; 
                 window.scrollBy(0, distance);
                 totalHeight += distance;
+
                 if (totalHeight >= scrollHeight) {
                     clearInterval(timer);
                     resolve();
                 }
-            }, 100);
+            }, 250); // ✅ ROLAGEM MAIS LENTA: Aumentado de 100ms para 250ms
         });
     });
 
-    // ✅ TEMPO DE ESPERA EXTRA AUMENTADO PARA 6 SEGUNDOS
-    await new Promise(resolve => setTimeout(resolve, 6000));
+    // Aumentamos um pouco a pausa final também, para garantir
+    await new Promise(resolve => setTimeout(resolve, 8000)); 
     console.log('Rolagem finalizada. Extraindo HTML...');
 
     const html = await page.content();
