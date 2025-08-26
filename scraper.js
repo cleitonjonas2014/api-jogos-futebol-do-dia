@@ -21,9 +21,29 @@ export async function buscarJogos(dia = 'hoje') {
     });
     const page = await browser.newPage();
     console.log(`Navegando para ${urlDoSite}...`);
-    await page.goto(urlDoSite, { waitUntil: 'networkidle2' });
-    await page.waitForSelector('div.gamecard', { timeout: 30000 });
-    console.log("Conteúdo carregado. Iniciando extração...");
+    await page.goto(urlDoSite, { waitUntil: 'networkidle2', timeout: 60000 }); // Aumentado timeout
+
+    // ✅ NOVO: SIMULA UM USUÁRIO ROLANDO A PÁGINA PARA FORÇAR O CARREGAMENTO DE IMAGENS
+    console.log('Simulando rolagem para carregar todas as imagens...');
+    await page.evaluate(async () => {
+        await new Promise((resolve) => {
+            let totalHeight = 0;
+            const distance = 100;
+            const timer = setInterval(() => {
+                const scrollHeight = document.body.scrollHeight;
+                window.scrollBy(0, distance);
+                totalHeight += distance;
+                if (totalHeight >= scrollHeight) {
+                    clearInterval(timer);
+                    resolve();
+                }
+            }, 100);
+        });
+    });
+
+    // Espera um pouco mais para garantir que as imagens carregaram
+    await new Promise(resolve => setTimeout(resolve, 3000)); 
+    console.log('Rolagem finalizada. Extraindo HTML...');
 
     const html = await page.content();
     const $ = cheerio.load(html);
@@ -34,28 +54,22 @@ export async function buscarJogos(dia = 'hoje') {
       
       const campeonato = card.find('div.all-scores-widget-competition-header-container-hora b').text().trim();
       const iconeCampeonatoSrc = card.find('div.all-scores-widget-competition-header-container-hora img').attr('src');
-      
-      // ✅ AJUSTE AQUI: Só define o ícone se a URL for encontrada
       const iconeCampeonato = iconeCampeonatoSrc ? iconeCampeonatoSrc : null;
-
+      
+      // ... (O resto da lógica de extração continua exatamente igual) ...
       const horario = card.find('div.box_time').text().trim();
-      const status = card.find('div.cardtime.badge').text().replace(/\s+/g, ' ').trim() || 'Agendado';
-      
+      const status = card.find('div.cardtime.badge').text().replace(/\s+/g, ' ').trim() || 'Agregado';
       const timesRows = card.find('div.col-9.col-sm-10 > div.d-flex');
-      
       const timeCasaElement = $(timesRows[0]);
       const timeForaElement = $(timesRows[1]);
-
       const timeCasa = timeCasaElement.find('span').first().text().trim();
       const placarCasa = timeCasaElement.find('span').last().text().replace(/\s+/g, '').trim();
       const timeFora = timeForaElement.find('span').first().text().trim();
       const placarFora = timeForaElement.find('span').last().text().replace(/\s+/g, '').trim();
-      
       const iconeCasaSrc = timeCasaElement.find('img').attr('src');
       const iconeForaSrc = timeForaElement.find('img').attr('src');
       const iconeCasa = iconeCasaSrc ? baseUrl + iconeCasaSrc : null;
       const iconeFora = iconeForaSrc ? baseUrl + iconeForaSrc : null;
-
       const canaisContainer = card.children('a').first().next('div.container.text-center');
       const canais = [];
       canaisContainer.find('div.bcmact').each((i, el) => {
