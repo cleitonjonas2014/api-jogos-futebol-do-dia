@@ -1,27 +1,32 @@
 import express from 'express';
 import { buscarJogos } from './scraper.js';
 
-// Configuração do servidor
 const app = express();
-// Usa a porta fornecida pelo Railway (process.env.PORT) ou a 3000 como padrão
 const PORT = process.env.PORT || 3000;
 
-// Cria o "endpoint" (a rota) principal da nossa API
-app.get('/jogos', async (req, res) => {
-  console.log('Recebida requisição para /jogos...');
+// A rota agora usa um parâmetro opcional ':dia?'
+// Isso significa que tanto /jogos quanto /jogos/hoje funcionarão
+app.get('/jogos/:dia?', async (req, res) => {
+  // Pega o parâmetro da URL. Se não for fornecido, usa 'hoje' como padrão.
+  const diaSelecionado = req.params.dia || 'hoje';
+  
+  // Validação simples para aceitar apenas as opções esperadas
+  const diasValidos = ['agora', 'ontem', 'hoje', 'amanha'];
+  if (!diasValidos.includes(diaSelecionado)) {
+    return res.status(400).json({ erro: "Parâmetro inválido. Use 'agora', 'ontem', 'hoje' ou 'amanha'." });
+  }
+
+  console.log(`Recebida requisição para /jogos/${diaSelecionado}...`);
   try {
-    // Chama a função do scraper para pegar os dados ao vivo
-    const dadosDosJogos = await buscarJogos();
-    // Devolve os dados como uma resposta JSON
+    // Passa o parâmetro para a função do scraper
+    const dadosDosJogos = await buscarJogos(diaSelecionado);
     res.status(200).json(dadosDosJogos);
   } catch (error) {
-    // Se der erro no scraper, devolve uma mensagem de erro
-    console.error('Erro ao buscar jogos:', error); // Adiciona um log do erro no servidor
-    res.status(500).json({ erro: 'Não foi possível buscar os dados dos jogos.' });
+    console.error(`Erro na rota /jogos/${diaSelecionado}:`, error);
+    res.status(500).json({ erro: `Não foi possível buscar os dados dos jogos para '${diaSelecionado}'.` });
   }
-}); // <--- Faltava fechar a chave da rota app.get
+});
 
-// Inicia o servidor e o faz "escutar" por requisições
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-}); // <--- Faltava fechar a chave da função listen
+  console.log(`🚀 Servidor rodando na porta ${PORT}!`);
+});
