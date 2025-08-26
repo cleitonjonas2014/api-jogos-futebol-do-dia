@@ -1,40 +1,40 @@
+// server.js
 import express from 'express';
-import cors from 'cors'; // <-- 1. IMPORTAR O PACOTE
-import { buscarJogos } from './scraper.js';
+import cors from 'cors';
+import { getCache } from './cache.js';
+import { startScheduledJobs } from './cron-jobs.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // <-- 2. HABILITAR O CORS PARA TODAS AS REQUISIÇÕES
+app.use(cors());
 
-// Esta é uma função auxiliar para não repetir o código
+// A função de requisição agora apenas LÊ o cache.
 const handleJogosRequest = async (dia, res) => {
-  // ... (o resto do código continua exatamente igual)
-  const diasValidos = ['agora', 'ontem', 'hoje', 'amanha'];
-  if (!diasValidos.includes(dia)) {
-    return res.status(400).json({ erro: "Parâmetro inválido. Use 'agora', 'ontem', 'hoje' ou 'amanha'." });
-  }
+    console.log(`Recebida requisição para os dados cacheados de '${dia}'.`);
+    const cachedData = getCache(dia);
 
-  console.log(`Recebida requisição para /jogos/${dia}...`);
-  try {
-    const dadosDosJogos = await buscarJogos(dia);
-    res.status(200).json(dadosDosJogos);
-  } catch (error) {
-    console.error(`Erro na rota /jogos/${dia}:`, error);
-    res.status(500).json({ erro: `Não foi possível buscar os dados dos jogos para '${dia}'.` });
-  }
+    if (cachedData) {
+        return res.status(200).json(cachedData);
+    }
+
+    // Se o cache ainda não foi criado, pede para o usuário aguardar.
+    res.status(503).json({ 
+        message: `Os dados para '${dia}' estão sendo preparados. Por favor, tente novamente em um minuto.` 
+    });
 };
 
-// ROTA 1: Rota para um dia específico (ex: /jogos/ontem)
+// As rotas não mudam
 app.get('/jogos/:dia', (req, res) => {
   handleJogosRequest(req.params.dia, res);
 });
 
-// ROTA 2: Rota padrão para /jogos, que sempre busca os jogos de 'hoje'
 app.get('/jogos', (req, res) => {
   handleJogosRequest('hoje', res);
 });
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}!`);
+  // Inicia o agendador de tarefas
+  startScheduledJobs();
 });
