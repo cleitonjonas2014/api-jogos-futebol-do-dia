@@ -21,9 +21,11 @@ export async function buscarJogos(dia = 'hoje') {
     });
     const page = await browser.newPage();
     console.log(`Navegando para ${urlDoSite}...`);
-    await page.goto(urlDoSite, { waitUntil: 'networkidle2', timeout: 60000 }); // Aumentado timeout
 
-    // ✅ NOVO: SIMULA UM USUÁRIO ROLANDO A PÁGINA PARA FORÇAR O CARREGAMENTO DE IMAGENS
+    // ✅ TEMPO DE ESPERA AUMENTADO PARA 2 MINUTOS
+    await page.goto(urlDoSite, { waitUntil: 'networkidle2', timeout: 120000 });
+
+    // ✅ LÓGICA DE ROLAGEM DA PÁGINA (JÁ INCLUÍDA)
     console.log('Simulando rolagem para carregar todas as imagens...');
     await page.evaluate(async () => {
         await new Promise((resolve) => {
@@ -41,8 +43,8 @@ export async function buscarJogos(dia = 'hoje') {
         });
     });
 
-    // Espera um pouco mais para garantir que as imagens carregaram
-    await new Promise(resolve => setTimeout(resolve, 3000)); 
+    // ✅ TEMPO DE ESPERA EXTRA AUMENTADO PARA 6 SEGUNDOS
+    await new Promise(resolve => setTimeout(resolve, 6000));
     console.log('Rolagem finalizada. Extraindo HTML...');
 
     const html = await page.content();
@@ -56,7 +58,6 @@ export async function buscarJogos(dia = 'hoje') {
       const iconeCampeonatoSrc = card.find('div.all-scores-widget-competition-header-container-hora img').attr('src');
       const iconeCampeonato = iconeCampeonatoSrc ? iconeCampeonatoSrc : null;
       
-      // ... (O resto da lógica de extração continua exatamente igual) ...
       const horario = card.find('div.box_time').text().trim();
       const status = card.find('div.cardtime.badge').text().replace(/\s+/g, ' ').trim() || 'Agregado';
       const timesRows = card.find('div.col-9.col-sm-10 > div.d-flex');
