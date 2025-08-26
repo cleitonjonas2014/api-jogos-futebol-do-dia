@@ -1,9 +1,10 @@
 import express from 'express';
-import { buscarJogos } from './scraper.js'; // Importa nossa função!
+import { buscarJogos } from './scraper.js';
 
 // Configuração do servidor
 const app = express();
-const PORT = 3000; // A porta que nossa API vai usar
+// Usa a porta fornecida pelo Railway (process.env.PORT) ou a 3000 como padrão
+const PORT = process.env.PORT || 3000;
 
 // Cria o "endpoint" (a rota) principal da nossa API
 app.get('/jogos', async (req, res) => {
@@ -15,10 +16,12 @@ app.get('/jogos', async (req, res) => {
     res.status(200).json(dadosDosJogos);
   } catch (error) {
     // Se der erro no scraper, devolve uma mensagem de erro
+    console.error('Erro ao buscar jogos:', error); // Adiciona um log do erro no servidor
     res.status(500).json({ erro: 'Não foi possível buscar os dados dos jogos.' });
   }
-});
+}); // <--- Faltava fechar a chave da rota app.get
 
 // Inicia o servidor e o faz "escutar" por requisições
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando! Acesse os jogos em http://localhost:${PORT}/jogos`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+}); // <--- Faltava fechar a chave da função listen
