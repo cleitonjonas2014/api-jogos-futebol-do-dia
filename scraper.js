@@ -3,40 +3,25 @@ import puppeteer from 'puppeteer';
 
 const baseUrl = 'https://www.futebolnatv.com.br';
 
-// A função agora aceita um parâmetro 'dia', com 'hoje' sendo o valor padrão.
 export async function buscarJogos(dia = 'hoje') {
-  // Mapeamento dos parâmetros para as URLs reais
   const urls = {
     agora: `${baseUrl}/jogos-aovivo/`,
     ontem: `${baseUrl}/jogos-ontem/`,
     hoje: `${baseUrl}/jogos-hoje/`,
     amanha: `${baseUrl}/jogos-amanha/`,
   };
-
-  // Escolhe a URL correta com base no parâmetro, ou usa 'hoje' se for inválido
   const urlDoSite = urls[dia] || urls['hoje'];
-
   console.log(`Iniciando scraper para a seção: '${dia}'...`);
   
   let browser = null;
   try {
     browser = await puppeteer.launch({
       headless: "new",
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process'
-      ]
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process']
     });
     const page = await browser.newPage();
-
     console.log(`Navegando para ${urlDoSite}...`);
     await page.goto(urlDoSite, { waitUntil: 'networkidle2' });
-
-    console.log("Esperando seletor da página de jogos...");
-    // O seletor para os cards de jogos parece ser o mesmo em todas as páginas
     await page.waitForSelector('div.gamecard', { timeout: 30000 });
     console.log("Conteúdo carregado. Iniciando extração...");
 
@@ -44,13 +29,14 @@ export async function buscarJogos(dia = 'hoje') {
     const $ = cheerio.load(html);
     const jogosEncontrados = [];
 
-    // O restante da lógica de extração é exatamente a mesma
     $('body').find('div.gamecard:not([wire\\:snapshot])').each((index, element) => {
       const card = $(element);
       
       const campeonato = card.find('div.all-scores-widget-competition-header-container-hora b').text().trim();
       const iconeCampeonatoSrc = card.find('div.all-scores-widget-competition-header-container-hora img').attr('src');
-      const iconeCampeonato = iconeCampeonatoSrc; // Já é uma URL absoluta
+      
+      // ✅ AJUSTE AQUI: Só define o ícone se a URL for encontrada
+      const iconeCampeonato = iconeCampeonatoSrc ? iconeCampeonatoSrc : null;
 
       const horario = card.find('div.box_time').text().trim();
       const status = card.find('div.cardtime.badge').text().replace(/\s+/g, ' ').trim() || 'Agendado';
