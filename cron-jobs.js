@@ -18,7 +18,7 @@ async function updateDailyCache() {
     console.log('CRON DIÁRIO: Atualização finalizada.');
 }
 
-// TAREFA 2: Atualizar o cache dos jogos ao vivo (a cada 20 minutos)
+// TAREFA 2: Atualizar o cache dos jogos ao vivo
 async function updateLiveCache() {
     console.log('CRON AO VIVO: Iniciando atualização do cache para "agora"...');
     try {
@@ -38,13 +38,13 @@ export function startScheduledJobs() {
         timezone: "America/Sao_Paulo"
     });
 
-    // Agenda a tarefa de jogos ao vivo para rodar a cada 20 minutos
-    cron.schedule('*/20 * * * *', updateLiveCache, {
+    // ✅ ALTERAÇÃO: Agenda a tarefa de jogos ao vivo para rodar a cada 2 minutos.
+    cron.schedule('*/2 * * * *', updateLiveCache, {
         scheduled: true,
         timezone: "America/Sao_Paulo"
     });
 
-    console.log('Tarefas agendadas: Diária (00:01) e Ao Vivo (a cada 20 min).');
+    console.log('Tarefas agendadas: Diária (00:01) e Ao Vivo (a cada 2 min).');
 
     // Executa as tarefas uma vez na inicialização para criar o primeiro cache
     console.log('Executando aquecimento de cache inicial...');
