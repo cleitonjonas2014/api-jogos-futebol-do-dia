@@ -4,27 +4,33 @@ import { buscarJogos } from './scraper.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// A rota agora usa um parâmetro opcional ':dia?'
-// Isso significa que tanto /jogos quanto /jogos/hoje funcionarão
-app.get('/jogos/:dia?', async (req, res) => {
-  // Pega o parâmetro da URL. Se não for fornecido, usa 'hoje' como padrão.
-  const diaSelecionado = req.params.dia || 'hoje';
-  
-  // Validação simples para aceitar apenas as opções esperadas
+// Esta é uma função auxiliar para não repetir o código
+const handleJogosRequest = async (dia, res) => {
+  // Validação para aceitar apenas as opções esperadas
   const diasValidos = ['agora', 'ontem', 'hoje', 'amanha'];
-  if (!diasValidos.includes(diaSelecionado)) {
+  if (!diasValidos.includes(dia)) {
     return res.status(400).json({ erro: "Parâmetro inválido. Use 'agora', 'ontem', 'hoje' ou 'amanha'." });
   }
 
-  console.log(`Recebida requisição para /jogos/${diaSelecionado}...`);
+  console.log(`Recebida requisição para /jogos/${dia}...`);
   try {
     // Passa o parâmetro para a função do scraper
-    const dadosDosJogos = await buscarJogos(diaSelecionado);
+    const dadosDosJogos = await buscarJogos(dia);
     res.status(200).json(dadosDosJogos);
   } catch (error) {
-    console.error(`Erro na rota /jogos/${diaSelecionado}:`, error);
-    res.status(500).json({ erro: `Não foi possível buscar os dados dos jogos para '${diaSelecionado}'.` });
+    console.error(`Erro na rota /jogos/${dia}:`, error);
+    res.status(500).json({ erro: `Não foi possível buscar os dados dos jogos para '${dia}'.` });
   }
+};
+
+// ROTA 1: Rota para um dia específico (ex: /jogos/ontem)
+app.get('/jogos/:dia', (req, res) => {
+  handleJogosRequest(req.params.dia, res);
+});
+
+// ROTA 2: Rota padrão para /jogos, que sempre busca os jogos de 'hoje'
+app.get('/jogos', (req, res) => {
+  handleJogosRequest('hoje', res);
 });
 
 app.listen(PORT, () => {
