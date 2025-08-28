@@ -20,15 +20,16 @@ async function updateDailyCache() {
     console.log('CRON DIÁRIO: Iniciando atualização do cache por data...');
     
     const hoje = new Date();
-    const ontem = new Date(hoje);
+    // Ajuste para garantir que a data de ontem e amanhã não pule um dia por conta de fuso horário na virada do mês
+    const ontem = new Date();
     ontem.setDate(hoje.getDate() - 1);
-    const amanha = new Date(hoje);
+    const amanha = new Date();
     amanha.setDate(hoje.getDate() + 1);
 
     const diasParaBuscar = [
-        { nome: 'ontem', data: getFormattedDate(ontem) },
         { nome: 'hoje', data: getFormattedDate(hoje) },
         { nome: 'amanha', data: getFormattedDate(amanha) }
+        // A busca por 'ontem' pode ser removida se o front-end não a utilizar mais.
     ];
 
     for (const diaInfo of diasParaBuscar) {
@@ -44,7 +45,7 @@ async function updateDailyCache() {
     console.log('CRON DIÁRIO: Atualização por data finalizada.');
 }
 
-// TAREFA 2: Atualizar o cache dos jogos ao vivo (não precisa de alteração na lógica)
+// TAREFA 2: Atualizar o cache dos jogos ao vivo
 async function updateLiveCache() {
     console.log('CRON AO VIVO: Iniciando atualização do cache para "agora"...');
     try {
@@ -64,13 +65,15 @@ export function startScheduledJobs() {
         timezone: "America/Sao_Paulo"
     });
 
-    // Agenda a tarefa de jogos ao vivo para rodar a cada 2 minutos.
-    cron.schedule('*/2 * * * *', updateLiveCache, {
+    // --- ALTERAÇÃO APLICADA AQUI ---
+    // Agenda a tarefa de jogos ao vivo para rodar A CADA 1 MINUTO.
+    cron.schedule('* * * * *', updateLiveCache, {
         scheduled: true,
         timezone: "America/Sao_Paulo"
     });
 
-    console.log('Tarefas agendadas: Diária (00:01) e Ao Vivo (a cada 2 min).');
+    console.log('Tarefas agendadas: Diária (00:01) e Ao Vivo (a cada 1 min).');
+    // --- FIM DA ALTERAÇÃO ---
 
     // Executa as tarefas uma vez na inicialização para criar o primeiro cache
     console.log('Executando aquecimento de cache inicial...');
