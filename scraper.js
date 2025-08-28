@@ -23,6 +23,7 @@ export async function buscarJogos(dia = 'hoje') {
 
     await page.goto(urlDoSite, { waitUntil: 'networkidle2', timeout: 120000 });
     
+    // Rola a página para garantir que todos os elementos (lazy-loaded) sejam carregados
     await page.evaluate(async () => {
         await new Promise((resolve) => {
             let totalHeight = 0;
@@ -50,12 +51,14 @@ export async function buscarJogos(dia = 'hoje') {
     $('div.gamecard').each((index, element) => {
       const card = $(element);
       
+      // Captura de dados comuns
       const campeonatoNome = card.find('div.all-scores-widget-competition-header-container-hora b').text().trim();
       const iconeCampeonatoSrc = card.find('div.all-scores-widget-competition-header-container-hora img').attr('src');
       
       const timeCasaElement = card.find('div.d-flex.justify-content-between').first();
       const timeForaElement = card.find('div.d-flex.justify-content-between').last();
 
+      // Pega o nome do time, ignorando o span do placar
       const timeCasa = timeCasaElement.find('span').first().clone().children().remove().end().text().trim();
       const timeFora = timeForaElement.find('span').first().clone().children().remove().end().text().trim();
 
@@ -64,20 +67,25 @@ export async function buscarJogos(dia = 'hoje') {
 
       let horario, status, placarCasa, placarFora;
 
+      // A chave para a lógica: verifica o texto dentro da div de status ao vivo
       const liveTimeText = card.find('div.cardtime.badge.live').text().trim();
       
       if (liveTimeText && (liveTimeText.includes("'") || liveTimeText.toLowerCase().includes('intervalo'))) {
+        // Se a div tem texto (ex: "55'" ou "Intervalo"), o jogo está ao vivo
         horario = card.find('div.box_time').text().trim();
         status = liveTimeText;
         placarCasa = timeCasaElement.find('span').last().text().trim();
         placarFora = timeForaElement.find('span').last().text().trim();
+
       } else {
+        // Se a div está vazia, o jogo está agendado
         horario = card.find('div.box_time').text().trim();
         status = "Agendado";
         placarCasa = "";
         placarFora = "";
       }
 
+      // Captura dos canais
       const canais = [];
       card.find('div.bcmact').each((i, el) => {
           const nomeCanal = $(el).find('img').attr('alt');
@@ -87,6 +95,7 @@ export async function buscarJogos(dia = 'hoje') {
           }
       });
       
+      // Adiciona o jogo à lista se os dados essenciais foram encontrados
       if (timeCasa && timeFora) {
         jogosEncontrados.push({
           campeonato: { nome: campeonatoNome, icone: iconeCampeonatoSrc },
