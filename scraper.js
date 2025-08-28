@@ -56,7 +56,6 @@ export async function buscarJogos(dia = 'hoje') {
       const timeCasaElement = card.find('div.d-flex.justify-content-between').first();
       const timeForaElement = card.find('div.d-flex.justify-content-between').last();
 
-      // Nomes dos times: pegar apenas o texto antes do placar
       const timeCasa = timeCasaElement.find('span').first().clone().children().remove().end().text().trim();
       const timeFora = timeForaElement.find('span').first().clone().children().remove().end().text().trim();
 
@@ -65,26 +64,16 @@ export async function buscarJogos(dia = 'hoje') {
 
       let horario, status, placarCasa, placarFora;
 
-      // Verifica a div que contém o tempo de jogo para identificar "ao vivo"
-      const liveTimeStatusElement = card.find('div.cardtime.badge.p-1.mb-1.live.align-items-center > div.cardtime.badge.p-1.mb-1.live.align-items-center');
-      const liveTimeText = liveTimeStatusElement.text().trim().replace(/\s*/g, ''); // Remove comentários HTML
+      const liveTimeText = card.find('div.cardtime.badge.live').text().trim();
       
-      if (liveTimeText && liveTimeText.includes("'")) { // Se contém tempo de jogo (ex: "55'")
-        // JOGO AO VIVO
+      if (liveTimeText && (liveTimeText.includes("'") || liveTimeText.toLowerCase().includes('intervalo'))) {
         horario = card.find('div.box_time').text().trim();
-        status = liveTimeText; // Ex: "55'"
-        placarCasa = timeCasaElement.find('span').last().text().trim();
-        placarFora = timeForaElement.find('span').last().text().trim();
-      } else if (liveTimeText && liveTimeText.toLowerCase().includes('intervalo')) {
-        // JOGO NO INTERVALO
-        horario = card.find('div.box_time').text().trim();
-        status = "Intervalo";
+        status = liveTimeText;
         placarCasa = timeCasaElement.find('span').last().text().trim();
         placarFora = timeForaElement.find('span').last().text().trim();
       } else {
-        // JOGO AGENDADO (ou encerrado, etc. - se a API tiver um status final, usaria ele)
         horario = card.find('div.box_time').text().trim();
-        status = "Agendado"; // Ou você pode tentar pegar um status mais específico se ele estiver em outro lugar
+        status = "Agendado";
         placarCasa = "";
         placarFora = "";
       }
