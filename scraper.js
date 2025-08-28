@@ -6,7 +6,6 @@ const baseUrl = 'https://www.futebolnatv.com.br';
 export async function buscarJogos(dia = 'hoje') {
   const urls = {
     agora: `${baseUrl}/jogos-aovivo/`,
-    ontem: `${baseUrl}/jogos-ontem/`,
     hoje: `${baseUrl}/jogos-hoje/`,
     amanha: `${baseUrl}/jogos-amanha/`,
   };
@@ -23,8 +22,8 @@ export async function buscarJogos(dia = 'hoje') {
     console.log(`Navegando para ${urlDoSite}...`);
 
     await page.goto(urlDoSite, { waitUntil: 'networkidle2', timeout: 120000 });
-
-    console.log('Simulando rolagem LENTA para carregar todas as imagens...');
+    
+    // A rolagem pode não ser mais necessária se o puppeteer esperar o suficiente, mas manteremos por segurança.
     await page.evaluate(async () => {
         await new Promise((resolve) => {
             let totalHeight = 0;
@@ -38,55 +37,81 @@ export async function buscarJogos(dia = 'hoje') {
                     clearInterval(timer);
                     resolve();
                 }
-            }, 250); // ✅ ROLAGEM MAIS LENTA: Aumentado de 100ms para 250ms
+            }, 250);
         });
     });
 
-    // Aumentamos um pouco a pausa final também, para garantir
-    await new Promise(resolve => setTimeout(resolve, 8000)); 
+    await new Promise(resolve => setTimeout(resolve, 3000)); 
     console.log('Rolagem finalizada. Extraindo HTML...');
 
     const html = await page.content();
     const $ = cheerio.load(html);
     const jogosEncontrados = [];
 
-    $('body').find('div.gamecard:not([wire\\:snapshot])').each((index, element) => {
+    // Usando o seletor principal do card
+    $('div.gamecard').each((index, element) => {
       const card = $(element);
       
-      const campeonato = card.find('div.all-scores-widget-competition-header-container-hora b').text().trim();
+      // --- INÍCIO DA LÓGICA ATUALIZADA ---
+
+      // Dados comuns a ambos os layouts
+      const campeonatoNome = card.find('div.all-scores-widget-competition-header-container-hora b').text().trim();
       const iconeCampeonatoSrc = card.find('div.all-scores-widget-competition-header-container-hora img').attr('src');
-      const iconeCampeonato = iconeCampeonatoSrc ? iconeCampeonatoSrc : null;
       
-      const horario = card.find('div.box_time').text().trim();
-      const status = card.find('div.cardtime.badge').text().replace(/\s+/g, ' ').trim() || 'Agregado';
-      const timesRows = card.find('div.col-9.col-sm-10 > div.d-flex');
-      const timeCasaElement = $(timesRows[0]);
-      const timeForaElement = $(timesRows[1]);
-      const timeCasa = timeCasaElement.find('span').first().text().trim();
-      const placarCasa = timeCasaElement.find('span').last().text().replace(/\s+/g, '').trim();
-      const timeFora = timeForaElement.find('span').first().text().trim();
-      const placarFora = timeForaElement.find('span').last().text().replace(/\s+/g, '').trim();
+      const timeCasaElement = card.find('div.d-flex.justify-content-between').first();
+      const timeForaElement = card.find('div.d-flex.justify-content-between').last();
+
+      // Limpa os nomes dos times para pegar apenas o nome, sem o placar
+      const timeCasa = timeCasaElement.find('span').first().contents().filter((i, el) => el.type === 'text').text().trim();
+      const timeFora = timeForaElement.find('span').first().contents().filter((i, el) => el.type === 'text').text().trim();
+
       const iconeCasaSrc = timeCasaElement.find('img').attr('src');
       const iconeForaSrc = timeForaElement.find('img').attr('src');
-      const iconeCasa = iconeCasaSrc ? baseUrl + iconeCasaSrc : null;
-      const iconeFora = iconeForaSrc ? baseUrl + iconeForaSrc : null;
-      const canaisContainer = card.children('a').first().next('div.container.text-center');
+
+      // Variáveis que mudarão dependendo do status do jogo
+      let horario, status, placarCasa, placarFora;
+
+      // O PONTO CHAVE: Verifica se a div de status ao vivo tem algum texto dentro
+      const statusAoVivo = card.find('div.cardtime.badge.live').text().trim();
+
+      if (statusAoVivo) {
+        // É UM JOGO AO VIVO
+        horario = card.find('div.box_time').text().trim();
+        status = statusAoVivo;
+        placarCasa = timeCasaElement.find('span').last().text().trim();
+        placarFora = timeForaElement.find('span').last().text().trim();
+
+      } else {
+        // É UM JOGO AGENDADO
+        horario = card.find('div.box_time').text().trim();
+        status = "Agendado";
+        placarCasa = "";
+        placarFora = "";
+      }
+
+      // Captura de canais (a lógica parece a mesma)
       const canais = [];
-      canaisContainer.find('div.bcmact').each((i, el) => {
-          const nomeCanal = $(el).text().trim().replace(/\s+/g, ' ');
+      card.find('div.bcmact').each((i, el) => {
+          const nomeCanal = $(el).find('img').attr('alt');
           const iconeCanalSrc = $(el).find('img').attr('src');
-          const iconeCanal = iconeCanalSrc ? baseUrl + iconeCanalSrc : null;
-          if (nomeCanal) {
-            canais.push({ canal: nomeCanal, icone: iconeCanal });
+          if (nomeCanal && iconeCanalSrc) {
+            canais.push({ canal: nomeCanal, icone: baseUrl + iconeCanalSrc });
           }
       });
-
+      
       if (timeCasa && timeFora) {
         jogosEncontrados.push({
-          campeonato: { nome: campeonato, icone: iconeCampeonato },
+          campeonato: { nome: campeonatoNome, icone: iconeCampeonatoSrc },
           horario,
           status,
-          partida: { timeCasa, iconeCasa, placarCasa, timeFora, iconeFora, placarFora },
+          partida: { 
+            timeCasa, 
+            iconeCasa: iconeCasaSrc ? baseUrl + iconeCasaSrc : null, 
+            placarCasa, 
+            timeFora, 
+            iconeFora: iconeForaSrc ? baseUrl + iconeForaSrc : null, 
+            placarFora 
+          },
           canais,
         });
       }
